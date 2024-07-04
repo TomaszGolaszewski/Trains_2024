@@ -8,7 +8,7 @@ from global_variables import *
 from functions_math import *
 
 class Tile:
-    def __init__(self, id, coord_id, coord_world, dict_with_tracks={}, type="grass"):
+    def __init__(self, id, coord_id, coord_world, list_with_tracks=[], type="grass"):
         """Initialization of the tile."""
         self.id = id
         self.coord_id = coord_id
@@ -16,17 +16,22 @@ class Tile:
         self.tile_type = type
         self.set_type(type)
 
-        self.dict_with_tracks = dict_with_tracks
+        self.list_with_tracks = list_with_tracks
+
+        # labels
+        self.font_obj = pygame.font.SysFont("arial", 20)
 
     def draw(self, win, offset_x: int, offset_y: int, scale):
         """Draw the Tile on the screen."""
         coord_screen = world2screen(self.coord_world, offset_x, offset_y, scale) 
         # draw background
         pygame.draw.circle(win, self.color, coord_screen, 50*scale)
+        # draw label
+        text_obj = self.font_obj.render(f"{self.id} {self.coord_id} {self.list_with_tracks}", True, self.color, BLACK)
+        win.blit(text_obj, coord_screen)
         # draw tracks
-        for track_angle in self.dict_with_tracks:
-            pygame.draw.line(win, RED, coord_screen, move_point(coord_screen, 60*scale, math.radians(track_angle)), int(8*scale))
-
+        # for track_angle in self.list_with_tracks:
+        #     pygame.draw.line(win, RED, coord_screen, move_point(coord_screen, 60*scale, math.radians(track_angle)), int(8*scale))
 
     def set_type(self, type, depth=0):
         """Set color of the tile depending on the type of terrain."""
@@ -63,41 +68,61 @@ class Map:
         self.outer_tile_radius = tile_edge_length # outer radius = length of the edge
         self.inner_tile_radius = tile_edge_length * SQRT3 / 2 # inner radius
 
-        # self.world = {}
-        # 0, 60, 120, 180, 240, 300
         self.list_with_tiles = {
-            1: Tile(1, (0, 0), self.id2world((0, 0)), {}, "water"),
+            1: Tile(1, (0, 0), self.id2world((0, 0)), [], "water"),
 
-            2: Tile(2, (1, 0), self.id2world((1, 0)), {0: 120, 120: 0}),
-            3: Tile(3, (2, 0), self.id2world((2, 0)), {0: 180, 180: 0}, "snow"),
-            4: Tile(4, (3, 0), self.id2world((3, 0)), {0: 180, 180: 0}),
-            5: Tile(5, (4, 0), self.id2world((4, 0)), {0: 180, 180: 0}, "snow"),
-            6: Tile(6, (5, 0), self.id2world((5, 0)), {0: 180, 180: 0, 0: 60, 60: 0}),
-            7: Tile(7, (6, 0), self.id2world((6, 0)), {0: 180, 180: 0}),
+            2: Tile(2, (1, 0), self.id2world((1, 0)), [3,8]),
+            3: Tile(3, (2, 0), self.id2world((2, 0)), [2,4], "snow"),
+            4: Tile(4, (3, 0), self.id2world((3, 0)), [3,5]),
+            5: Tile(5, (4, 0), self.id2world((4, 0)), [4,6], "snow"),
+            6: Tile(6, (5, 0), self.id2world((5, 0)), [5,7]),
+            7: Tile(7, (6, 0), self.id2world((6, 0)), [6]),
 
-            8: Tile(8, (0, 1), self.id2world((0, 1)), {120: 300, 300: 120}),
-            9: Tile(9, (0, 2), self.id2world((0, 2)), {60: 300, 300: 60}, "snow"),
-            10: Tile(10, (0, 3), self.id2world((0, 3)), {120: 240, 240: 120}),
-            11: Tile(11, (0, 4), self.id2world((0, 4)), {60: 300, 300: 60}),
-            12: Tile(12, (0, 5), self.id2world((0, 5)), {120: 240, 240: 120}),
+            8: Tile(8, (0, 1), self.id2world((0, 1)), [9,2]),
+            9: Tile(9, (0, 2), self.id2world((0, 2)), [8,10], "snow"),
+            10: Tile(10, (0, 3), self.id2world((0, 3)), [9,11]),
+            11: Tile(11, (0, 4), self.id2world((0, 4)), [10,12]),
+            12: Tile(12, (0, 5), self.id2world((0, 5)), [11]),
 
             13: Tile(13, (4, 3), self.id2world((4, 3))),
 
-            14: Tile(14, (-1, 0), self.id2world((-1, 0)), {}, "water"),
-            15: Tile(15, (-2, 0), self.id2world((-2, 0)), {}, "water"),
+            14: Tile(14, (-1, 0), self.id2world((-1, 0)), [], "water"),
+            15: Tile(15, (-2, 0), self.id2world((-2, 0)), [], "water"),
+
+            19: Tile(19, (0, -1), self.id2world((0, -1)), [], "water"),
+            20: Tile(20, (0, -2), self.id2world((0, -2)), [], "water"),
+
+            16: Tile(16, (4, 1), self.id2world((4, 1)), [5,17], "snow"),
+            17: Tile(17, (5, 1), self.id2world((5, 1)), [16,18]),
+            18: Tile(18, (6, 1), self.id2world((6, 1)), [17]),
         }
-        self.lowest_free_id = 16
+        self.lowest_free_id = 21
 
     def draw(self, win, offset_x: int, offset_y: int, scale):
         """Draw the Map on the screen."""
         for tile_id in self.list_with_tiles:
-            self.list_with_tiles[tile_id].draw(win, offset_x, offset_y, scale)
+            tile = self.list_with_tiles[tile_id]
+            tile.draw(win, offset_x, offset_y, scale)
+            # draw tracks
+            coord_screen = world2screen(tile.coord_world, offset_x, offset_y, scale)
+            for neighbor_tile_id in tile.list_with_tracks:
+                neighbor_coord_screen = world2screen(self.list_with_tiles[neighbor_tile_id].coord_world, offset_x, offset_y, scale)
+                pygame.draw.line(win, RED, coord_screen, neighbor_coord_screen, int(8*scale))
 
-    def add_tile(self, coord_world, terrain):
+    def add_tile(self, coord_world: tuple[float, float], terrain: str):
         coord_id = self.world2id(coord_world)
-        self.list_with_tiles[self.lowest_free_id] = Tile(self.lowest_free_id, coord_id, self.id2world(coord_id), {}, terrain)
-        self.lowest_free_id += 1
+        tile_id = self.get_tile_by_coord(coord_id)
+        if not tile_id:
+            self.list_with_tiles[self.lowest_free_id] = Tile(self.lowest_free_id, coord_id, self.id2world(coord_id), [], terrain)
+            self.lowest_free_id += 1
         # TODO:
+
+    def get_tile_by_coord(self, coord_id: tuple[int, int]) -> int:
+        """Return ID of tile indicated by coordinates."""
+        for tile_id in self.list_with_tiles:
+            if self.list_with_tiles[tile_id].coord_id == coord_id:
+                return self.list_with_tiles[tile_id].id
+        return False
 
     def id2world(self, coord_id: tuple[int, int]) -> tuple[float, float]:
         """
@@ -105,14 +130,11 @@ class Map:
         Return coordinates in the world coordinate system.
         """
         x_id, y_id = coord_id
-
         if y_id % 2:
             x_world = (2 * x_id + 1) * self.inner_tile_radius
         else:
             x_world = 2 * x_id * self.inner_tile_radius
-
         y_world = 3 / 2 * self.outer_tile_radius * y_id
-
         return (x_world, y_world)
 
     def world2id(self, coord_world: tuple[float, float]) -> tuple[int, int]:
@@ -121,12 +143,9 @@ class Map:
         Return tile's id coordinates.
         """
         x_world, y_world = coord_world
-        
-        y_id = int(2 / 3 * y_world / self.outer_tile_radius + 0.5)
-
+        y_id = math.floor(2 / 3 * y_world / self.outer_tile_radius + 0.5)
         if y_id % 2:
-            x_id = int(x_world / self.inner_tile_radius / 2)
+            x_id = math.floor(x_world / self.inner_tile_radius / 2)
         else:
-            x_id = int(x_world / self.inner_tile_radius / 2 + 0.5)
-
+            x_id = math.floor(x_world / self.inner_tile_radius / 2 + 0.5)
         return (x_id, y_id)

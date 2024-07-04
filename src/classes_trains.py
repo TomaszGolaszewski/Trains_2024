@@ -20,12 +20,18 @@ class Train:
         self.turn_speed = 0.01
         self.movement_path = []
 
+        # labels
+        self.font_obj = pygame.font.SysFont("arial", 20)
+
     def draw(self, win, map, offset_x: int, offset_y: int, scale):
         """Draw the train on the screen."""
         coord_screen = world2screen(self.coord_world, offset_x, offset_y, scale) 
         # draw train as symbol
         pygame.draw.circle(win, self.color, coord_screen, 20*scale)
         pygame.draw.line(win, BLACK, coord_screen, move_point(coord_screen, 20*scale, self.angle), int(4*scale))
+        # draw label
+        text_obj = self.font_obj.render(f"{self.v_current:.2f} {self.movement_path}", True, self.color, BLACK)
+        win.blit(text_obj, (coord_screen[0] + 15, coord_screen[1] + 10))
         # draw tracks
         for tile_id in self.movement_path:
             pygame.draw.circle(win, self.color, world2screen(map.list_with_tiles[tile_id].coord_world, offset_x, offset_y, scale) , 10*scale)

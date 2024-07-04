@@ -49,7 +49,7 @@ class TitleScene(SceneBase):
         self.exit_button = AdvancedButton((WIN_WIDTH/2, WIN_HEIGHT/2 + 200), "[Exit]", 30, color=GRAY)
         self.seconds_since_start = 0
         self.current_frame = 0
-        self.buttons_delay = 1
+        self.buttons_delay = 0 #1
     
     def process_input(self, events, keys_pressed):
         """
@@ -186,7 +186,7 @@ class GameScene(SceneBase):
             3: Train(3, self.map.list_with_tiles[12].coord_world, math.radians(270), BLUE),
         }
         self.dict_with_trains[1].movement_path = [8,9,10,11,12]
-        self.dict_with_trains[2].movement_path = [3,4,5,6,7]
+        self.dict_with_trains[2].movement_path = [3,4,5,16,17,18]
         self.dict_with_trains[3].movement_path = [12,11,10,9,8,2,3,4,5,6,7]
 
         # TODO: check and remove
@@ -225,22 +225,25 @@ class GameScene(SceneBase):
                         coord_world = screen2world(mouse_coord, self.offset_horizontal, self.offset_vertical, self.scale)
                         self.map.add_tile(coord_world, self.current_terrain)
 
+                    # add new tile
+                    if not button_was_pressed and self.current_mode == "tracks":
+                        pass
 
                     # TODO: check and remove
                     self.left_mouse_button_coord = pygame.mouse.get_pos()
                     self.left_mouse_button_down = False
                     
-                    # press UI windows (based on notebooks)
-                    for ui_win in self.list_with_windows:
-                        self.left_mouse_button_down |= ui_win.press_left(self.dict_with_game_state, self.dict_with_units, self.left_mouse_button_coord)
+                #     # press UI windows (based on notebooks)
+                #     for ui_win in self.list_with_windows:
+                #         self.left_mouse_button_down |= ui_win.press_left(self.dict_with_game_state, self.dict_with_units, self.left_mouse_button_coord)
 
-                    self.left_mouse_button_down = not self.left_mouse_button_down
+                #     self.left_mouse_button_down = not self.left_mouse_button_down
 
-                # 3 - right click
-                if event.button == 3:
-                    right_mouse_button_coord = pygame.mouse.get_pos()
-                    # make_windows_from_right_mouse_button(self.dict_with_units, self.list_with_windows, right_mouse_button_coord, \
-                    #                             screen2world(right_mouse_button_coord, self.offset_horizontal, self.offset_vertical, self.scale))
+                # # 3 - right click
+                # if event.button == 3:
+                #     right_mouse_button_coord = pygame.mouse.get_pos()
+                #     # make_windows_from_right_mouse_button(self.dict_with_units, self.list_with_windows, right_mouse_button_coord, \
+                #     #                             screen2world(right_mouse_button_coord, self.offset_horizontal, self.offset_vertical, self.scale))
 
             # mouse button up
             if event.type == pygame.MOUSEBUTTONUP:
@@ -255,11 +258,11 @@ class GameScene(SceneBase):
                     self.offset_horizontal -= (mouse_pos[0] - WIN_WIDTH/2) / self.scale
                     self.offset_vertical -= (mouse_pos[1] - WIN_HEIGHT/2) / self.scale
 
-                # 3 - right click
-                if event.button == 3:
-                    # press UI windows (based on slide)
-                    for ui_win in self.list_with_windows:
-                        ui_win.press_right(self.map, self.dict_with_units, pygame.mouse.get_pos(), keys_pressed[pygame.K_LCTRL])
+                # # 3 - right click
+                # if event.button == 3:
+                #     # press UI windows (based on slide)
+                #     for ui_win in self.list_with_windows:
+                #         ui_win.press_right(self.map, self.dict_with_units, pygame.mouse.get_pos(), keys_pressed[pygame.K_LCTRL])
 
                 # 4 - scroll up
                 if event.button == 4:
