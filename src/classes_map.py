@@ -27,11 +27,8 @@ class Tile:
         # draw background
         pygame.draw.circle(win, self.color, coord_screen, 50*scale)
         # draw label
-        text_obj = self.font_obj.render(f"{self.id} {self.coord_id} {self.list_with_tracks}", True, self.color, BLACK)
+        text_obj = self.font_obj.render(f"{self.id} {self.list_with_tracks}", True, self.color, BLACK) #  {self.coord_id}
         win.blit(text_obj, coord_screen)
-        # draw tracks
-        # for track_angle in self.list_with_tracks:
-        #     pygame.draw.line(win, RED, coord_screen, move_point(coord_screen, 60*scale, math.radians(track_angle)), int(8*scale))
 
     def set_type(self, type, depth=0):
         """Set color of the tile depending on the type of terrain."""
@@ -68,13 +65,13 @@ class Map:
         self.outer_tile_radius = tile_edge_length # outer radius = length of the edge
         self.inner_tile_radius = tile_edge_length * SQRT3 / 2 # inner radius
 
-        self.list_with_tiles = {
+        self.dict_with_tiles = {
             1: Tile(1, (0, 0), self.id2world((0, 0)), [], "water"),
 
             2: Tile(2, (1, 0), self.id2world((1, 0)), [3,8]),
             3: Tile(3, (2, 0), self.id2world((2, 0)), [2,4], "snow"),
             4: Tile(4, (3, 0), self.id2world((3, 0)), [3,5]),
-            5: Tile(5, (4, 0), self.id2world((4, 0)), [4,6], "snow"),
+            5: Tile(5, (4, 0), self.id2world((4, 0)), [4,6,16], "snow"),
             6: Tile(6, (5, 0), self.id2world((5, 0)), [5,7]),
             7: Tile(7, (6, 0), self.id2world((6, 0)), [6]),
 
@@ -100,35 +97,59 @@ class Map:
 
     def draw(self, win, offset_x: int, offset_y: int, scale):
         """Draw the Map on the screen."""
-        for tile_id in self.list_with_tiles:
-            tile = self.list_with_tiles[tile_id]
+        for tile_id in self.dict_with_tiles:
+            tile = self.dict_with_tiles[tile_id]
             tile.draw(win, offset_x, offset_y, scale)
             # draw tracks
             coord_screen = world2screen(tile.coord_world, offset_x, offset_y, scale)
             for neighbor_tile_id in tile.list_with_tracks:
-                neighbor_coord_screen = world2screen(self.list_with_tiles[neighbor_tile_id].coord_world, offset_x, offset_y, scale)
+                neighbor_coord_screen = world2screen(self.dict_with_tiles[neighbor_tile_id].coord_world, offset_x, offset_y, scale)
                 pygame.draw.line(win, RED, coord_screen, neighbor_coord_screen, int(8*scale))
 
-    def add_tile(self, coord_world: tuple[float, float], terrain: str):
-        coord_id = self.world2id(coord_world)
+    def add_tile(self, coord_id: tuple[int, int], terrain: str):
+        """Add new tile. If the tile exists, change its type."""
         tile_id = self.get_tile_by_coord(coord_id)
         if not tile_id:
-            self.list_with_tiles[self.lowest_free_id] = Tile(self.lowest_free_id, coord_id, self.id2world(coord_id), [], terrain)
+            self.dict_with_tiles[self.lowest_free_id] = Tile(self.lowest_free_id, coord_id, self.id2world(coord_id), [], terrain)
             self.lowest_free_id += 1
-        # TODO:
+        elif self.dict_with_tiles[tile_id].type != terrain:
+            self.dict_with_tiles[tile_id].set_type(terrain)
+
+    def remove_tile(self, tile_id: int):
+        """Remove tile with all connected tracks."""
+        # remove tracks
+        for neighbor_tile_id in self.dict_with_tiles[tile_id].list_with_tracks:
+            if tile_id in self.dict_with_tiles[neighbor_tile_id].list_with_tracks:
+                self.dict_with_tiles[neighbor_tile_id].list_with_tracks.remove(tile_id)
+        # remove tile
+        del self.dict_with_tiles[tile_id]
+
+    def add_track(self, first_tile_id: int, second_tile_id: int):
+        """Add new track (connection between tiles) by adding ids of connected 
+        tiles to lists of tracks of each track."""
+        if second_tile_id not in self.dict_with_tiles[first_tile_id].list_with_tracks:
+            self.dict_with_tiles[first_tile_id].list_with_tracks.append(second_tile_id)
+        if first_tile_id not in self.dict_with_tiles[second_tile_id].list_with_tracks:
+            self.dict_with_tiles[second_tile_id].list_with_tracks.append(first_tile_id)
+
+    def remove_track(self, first_tile_id: int, second_tile_id: int):
+        """Remove track (connection between tiles) by removing ids of connected 
+        tiles from lists of tracks of each track."""
+        if second_tile_id in self.dict_with_tiles[first_tile_id].list_with_tracks:
+            self.dict_with_tiles[first_tile_id].list_with_tracks.remove(second_tile_id)
+        if first_tile_id in self.dict_with_tiles[second_tile_id].list_with_tracks:
+            self.dict_with_tiles[second_tile_id].list_with_tracks.remove(first_tile_id)
 
     def get_tile_by_coord(self, coord_id: tuple[int, int]) -> int:
         """Return ID of tile indicated by coordinates."""
-        for tile_id in self.list_with_tiles:
-            if self.list_with_tiles[tile_id].coord_id == coord_id:
-                return self.list_with_tiles[tile_id].id
+        for tile_id in self.dict_with_tiles:
+            if self.dict_with_tiles[tile_id].coord_id == coord_id:
+                return self.dict_with_tiles[tile_id].id
         return False
 
     def id2world(self, coord_id: tuple[int, int]) -> tuple[float, float]:
-        """
-        Calculate coordinates from tile's id to world coordinate system.
-        Return coordinates in the world coordinate system.
-        """
+        """Calculate coordinates from tile's id to world coordinate system.
+        Return coordinates in the world coordinate system."""
         x_id, y_id = coord_id
         if y_id % 2:
             x_world = (2 * x_id + 1) * self.inner_tile_radius
@@ -138,10 +159,8 @@ class Map:
         return (x_world, y_world)
 
     def world2id(self, coord_world: tuple[float, float]) -> tuple[int, int]:
-        """
-        Calculate coordinates from world coordinate system to tile's id.
-        Return tile's id coordinates.
-        """
+        """Calculate coordinates from world coordinate system to tile's id.
+        Return tile's id coordinates."""
         x_world, y_world = coord_world
         y_id = math.floor(2 / 3 * y_world / self.outer_tile_radius + 0.5)
         if y_id % 2:

@@ -30,11 +30,11 @@ class Train:
         pygame.draw.circle(win, self.color, coord_screen, 20*scale)
         pygame.draw.line(win, BLACK, coord_screen, move_point(coord_screen, 20*scale, self.angle), int(4*scale))
         # draw label
-        text_obj = self.font_obj.render(f"{self.v_current:.2f} {self.movement_path}", True, self.color, BLACK)
+        text_obj = self.font_obj.render(f"{self.movement_path}", True, self.color, BLACK) # {self.v_current:.2f} 
         win.blit(text_obj, (coord_screen[0] + 15, coord_screen[1] + 10))
         # draw tracks
         for tile_id in self.movement_path:
-            pygame.draw.circle(win, self.color, world2screen(map.list_with_tiles[tile_id].coord_world, offset_x, offset_y, scale) , 10*scale)
+            pygame.draw.circle(win, self.color, world2screen(map.dict_with_tiles[tile_id].coord_world, offset_x, offset_y, scale) , 10*scale)
 
     def run(self, map):
         """Life-cycle of the train"""
@@ -42,13 +42,13 @@ class Train:
         # check current movement path
         if len(self.movement_path):
             coord_id = map.world2id(self.coord_world)
-            if map.list_with_tiles[self.movement_path[0]].coord_id == coord_id:
+            if map.dict_with_tiles[self.movement_path[0]].coord_id == coord_id:
                 self.movement_path.pop(0) # remove the achieved tile
 
         # move the train
         if len(self.movement_path):
             self.accelerate()
-            self.angle = self.get_new_angle(map.list_with_tiles[self.movement_path[0]].coord_world)
+            self.angle = self.get_new_angle(map.dict_with_tiles[self.movement_path[0]].coord_world)
         else: # if this was the last segment
             self.decelerate()
         self.coord_world = move_point(self.coord_world, self.v_current, self.angle)

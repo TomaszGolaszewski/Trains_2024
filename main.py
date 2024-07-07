@@ -32,7 +32,7 @@ def run():
     pygame.init()
 
     # set window title bar
-    pygame.display.set_caption("Tomasz Empire 20022")
+    pygame.display.set_caption("Trains 2024")
     icon_img = pygame.image.load(os.path.join(*ICON_PATH))
     pygame.display.set_icon(icon_img)
 
@@ -57,9 +57,8 @@ def run():
             fps_text.set_text("FPS: %.2f" % current_fps)
             seconds_from_start = pygame.time.get_ticks() // 1000
             minuts_from_start = seconds_from_start // 60
-            print()
             print("FPS: %.2f" % current_fps, end="\t")
-            print("TIME: " + str(seconds_from_start) + "s (" + str(minuts_from_start) + "min)" )
+            print(f"TIME: {seconds_from_start}s ({minuts_from_start}min)")
         
         # event filtering
         keys_pressed = pygame.key.get_pressed()
