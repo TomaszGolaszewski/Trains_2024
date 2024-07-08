@@ -108,7 +108,7 @@ class Map:
 
     def add_tile(self, coord_id: tuple[int, int], terrain: str):
         """Add new tile. If the tile exists, change its type."""
-        tile_id = self.get_tile_by_coord(coord_id)
+        tile_id = self.get_tile_by_coord_id(coord_id)
         if not tile_id:
             self.dict_with_tiles[self.lowest_free_id] = Tile(self.lowest_free_id, coord_id, self.id2world(coord_id), [], terrain)
             self.lowest_free_id += 1
@@ -140,12 +140,31 @@ class Map:
         if first_tile_id in self.dict_with_tiles[second_tile_id].list_with_tracks:
             self.dict_with_tiles[second_tile_id].list_with_tracks.remove(first_tile_id)
 
-    def get_tile_by_coord(self, coord_id: tuple[int, int]) -> int:
-        """Return ID of tile indicated by coordinates."""
+    def get_tile_by_coord_id(self, coord_id: tuple[int, int]) -> int:
+        """Return ID of tile indicated by ordinal coordinates."""
         for tile_id in self.dict_with_tiles:
             if self.dict_with_tiles[tile_id].coord_id == coord_id:
                 return self.dict_with_tiles[tile_id].id
         return False
+    
+    def get_track_by_coord_world(self, coord_world: tuple[float, float]) -> tuple[int, int]:
+        """Return pair of IDs of tiles indicated by global (world) coordinates."""
+        # find the first tile
+        first_tile_coord_id = self.world2id(coord_world)
+        first_tile_id = self.get_tile_by_coord_id(first_tile_coord_id)
+        if not first_tile_id: return False, False
+        # find the second tile
+        dist_to_closest = 9999
+        id_of_closest = 0
+        for tile_id in self.dict_with_tiles:
+            dist = dist_two_points(coord_world, self.dict_with_tiles[tile_id].coord_world)
+            if dist < dist_to_closest and tile_id != first_tile_id:
+                dist_to_closest = dist
+                id_of_closest = tile_id
+        if id_of_closest:
+            return first_tile_id, id_of_closest
+        # no tile found
+        return False, False
 
     def id2world(self, coord_id: tuple[int, int]) -> tuple[float, float]:
         """Calculate coordinates from tile's id to world coordinate system.

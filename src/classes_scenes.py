@@ -307,7 +307,7 @@ class GameScene(SceneBase):
     # handle the remaining logic related to mouse operation
         coord_world = screen2world(mouse_pos, self.offset_horizontal, self.offset_vertical, self.scale)
         coord_id = self.map.world2id(coord_world)
-        current_tile_id = self.map.get_tile_by_coord(coord_id)
+        current_tile_id = self.map.get_tile_by_coord_id(coord_id)
         # adding entities
         if self.left_mouse_button_down and (not current_tile_id or self.last_used_tile != current_tile_id):
             # add new tile
@@ -326,6 +326,16 @@ class GameScene(SceneBase):
                     if current_tile_id in self.dict_with_trains[train_id].movement_path:
                         self.dict_with_trains[train_id].movement_path = []
                 self.map.remove_tile(current_tile_id)
+            # remove tracks
+            if self.current_mode == "tracks":
+                tile_1, tile_2 = self.map.get_track_by_coord_world(coord_world)
+                if tile_1 and tile_2:
+                    # remove tile from train variables
+                    for train_id in self.dict_with_trains:
+                        if tile_1 in self.dict_with_trains[train_id].movement_path or\
+                                    tile_2 in self.dict_with_trains[train_id].movement_path:
+                            self.dict_with_trains[train_id].movement_path = []
+                    self.map.remove_track(tile_1, tile_2)
         
     def update(self):
         """Game logic for the scene."""

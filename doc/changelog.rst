@@ -1,3 +1,7 @@
+v0.1.3 - 08.07.2024
+------
+* Added mechanism for removing tracks.
+
 v0.1.2 - 08.07.2024
 ------
 * Added mechanism for adding and removing tiles;
