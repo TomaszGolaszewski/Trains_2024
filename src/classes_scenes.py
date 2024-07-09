@@ -180,13 +180,15 @@ class GameScene(SceneBase):
 
         # create initial test trains
         self.dict_with_trains = {
-            1: Train(1, self.map.dict_with_tiles[1].coord_world, math.radians(90), RED),
-            2: Train(2, self.map.dict_with_tiles[2].coord_world, math.radians(0), ORANGE),
-            3: Train(3, self.map.dict_with_tiles[12].coord_world, math.radians(270), BLUE),
+            # 1: Train(1, self.map.dict_with_tiles[1].coord_world, math.radians(90), RED),
+            # 2: Train(2, self.map.dict_with_tiles[2].coord_world, math.radians(0), ORANGE),
+            3: Train(3, self.map.dict_with_tiles[11].coord_world, 11, math.radians(270), BLUE),
         }
-        self.dict_with_trains[1].movement_path = [8,9,10,11,12]
-        self.dict_with_trains[2].movement_path = [3,4,5,16,17,18]
-        self.dict_with_trains[3].movement_path = [12,11,10,9,8,2,3,4,5,6,7]
+        # self.dict_with_trains[1].movement_path = [8,9,10,11,12]
+        # self.dict_with_trains[2].movement_path = [3,4,5,16,17,18]
+        # self.dict_with_trains[3].movement_path = [12,11,10,9,8,2,3,4,5,6,7]
+        self.dict_with_trains[3].last_tile_id = 12
+        self.dict_with_trains[3].movement_target = [18]
 
         # TODO: check and remove
         self.list_with_windows = []
@@ -312,10 +314,20 @@ class GameScene(SceneBase):
         if self.left_mouse_button_down and (not current_tile_id or self.last_used_tile != current_tile_id):
             # add new tile
             if self.current_mode == "terrain":
-                self.map.add_tile(coord_id, self.current_terrain)
+                current_tile_id = self.map.add_tile(coord_id, self.current_terrain)
             # add new track
             if self.current_mode == "tracks" and self.last_used_tile and current_tile_id:
                 self.map.add_track(self.last_used_tile, current_tile_id)
+
+            # if self.current_mode == "trains" and self.last_used_tile and current_tile_id:
+            #     print("BBBBBBBBBBBBBBBBBBBB")
+            #     c1 = self.map.dict_with_tiles[self.last_used_tile].coord_id
+            #     c2 = coord_id
+            #     c3 = self.map.extrapolate_tile_position(c1,c2,"left")
+            #     self.map.add_tile(c1, "mars")
+            #     self.map.add_tile(c2, "mars")
+            #     self.map.add_tile(c3, "water")
+
             self.last_used_tile = current_tile_id
         # removing entities
         if self.right_mouse_button_down:
@@ -327,7 +339,7 @@ class GameScene(SceneBase):
                         self.dict_with_trains[train_id].movement_path = []
                 self.map.remove_tile(current_tile_id)
             # remove tracks
-            if self.current_mode == "tracks":
+            if self.current_mode == "tracks" and current_tile_id:
                 tile_1, tile_2 = self.map.get_track_by_coord_world(coord_world)
                 if tile_1 and tile_2:
                     # remove tile from train variables

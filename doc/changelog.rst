@@ -1,3 +1,7 @@
+v0.1.4 - 10.07.2024
+------
+* Added pathfinding algorithm for trains.
+
 v0.1.3 - 08.07.2024
 ------
 * Added mechanism for removing tracks.

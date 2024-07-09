@@ -27,7 +27,7 @@ class Tile:
         # draw background
         pygame.draw.circle(win, self.color, coord_screen, 50*scale)
         # draw label
-        text_obj = self.font_obj.render(f"{self.id} {self.list_with_tracks}", True, self.color, BLACK) #  {self.coord_id}
+        text_obj = self.font_obj.render(f"{self.id}", True, self.color, BLACK) # {self.coord_id} {self.list_with_tracks}
         win.blit(text_obj, coord_screen)
 
     def set_type(self, type, depth=0):
@@ -106,14 +106,17 @@ class Map:
                 neighbor_coord_screen = world2screen(self.dict_with_tiles[neighbor_tile_id].coord_world, offset_x, offset_y, scale)
                 pygame.draw.line(win, RED, coord_screen, neighbor_coord_screen, int(8*scale))
 
-    def add_tile(self, coord_id: tuple[int, int], terrain: str):
-        """Add new tile. If the tile exists, change its type."""
+    def add_tile(self, coord_id: tuple[int, int], terrain: str) -> int:
+        """Add new tile. If the tile exists, change its type.
+        Return ID of the created/updated tile."""
         tile_id = self.get_tile_by_coord_id(coord_id)
         if not tile_id:
             self.dict_with_tiles[self.lowest_free_id] = Tile(self.lowest_free_id, coord_id, self.id2world(coord_id), [], terrain)
             self.lowest_free_id += 1
+            return self.lowest_free_id - 1
         elif self.dict_with_tiles[tile_id].type != terrain:
             self.dict_with_tiles[tile_id].set_type(terrain)
+            return tile_id
 
     def remove_tile(self, tile_id: int):
         """Remove tile with all connected tracks."""
@@ -187,3 +190,59 @@ class Map:
         else:
             x_id = math.floor(x_world / self.inner_tile_radius / 2 + 0.5)
         return (x_id, y_id)
+    
+    def extrapolate_tile_position_in_line(self, coord_1: tuple[int, int], 
+                                coord_2: tuple[int, int]) -> tuple[int, int]:
+        """Extrapolate the position of the tile in straight line 
+        based on the position of the two previous ones.
+        """
+        x1, y1 = coord_1
+        x2, y2 = coord_2
+        dx = x2 - x1
+        dy = y2 - y1
+
+        if y1 == y2: 
+            return (x2+dx, y1)
+        elif y1 % 2:
+            return (x2+dx-1, y2+dy)
+        else:
+            return (x2+dx+1, y2+dy)
+
+    def extrapolate_tile_position_with_coord(self, coord_id_1: tuple[int, int], 
+                        coord_id_2: tuple[int, int], turn: str = "center") -> tuple[int, int]:
+        """Extrapolate the position of the tile based on the position of the two previous ones.
+        Possible turns: left, right, center."""
+        coord_world_1 = self.id2world(coord_id_1)
+        coord_world_2 = self.id2world(coord_id_2)
+        angle = angle_to_target(coord_world_1, coord_world_2)
+        delta_angle = 0
+        if turn == "right": delta_angle = math.pi/3
+        if turn == "left": delta_angle = -math.pi/3
+        coord_world_3 = move_point(coord_world_2, 2 * self.inner_tile_radius, angle + delta_angle)
+        return self.world2id(coord_world_3)
+    
+    def extrapolate_tile_position_with_id(self, id_1: int, id_2: int, turn: str = "center") -> id:
+        """Extrapolate the ID of the tile based on the IDs of the two previous ones.
+        Possible turns: left, right, center."""
+        coord_world_2 = self.dict_with_tiles[id_2].coord_world
+        angle = angle_to_target(self.dict_with_tiles[id_1].coord_world, coord_world_2)
+        delta_angle = 0
+        if turn == "right": delta_angle = math.pi/3
+        if turn == "left": delta_angle = -math.pi/3
+        coord_world_3 = move_point(coord_world_2, 2 * self.inner_tile_radius, angle + delta_angle)
+        return self.get_tile_by_coord_id(self.world2id(coord_world_3))
+    
+    def find_route(self, target_tile_id: int, last_tile_id: int, current_tile_id: int, countdown: int) -> list[int]:
+        """"""
+        # check if current tile is the target
+        if current_tile_id == target_tile_id: return [current_tile_id]
+        # check if the recursion is not too deep
+        if not countdown: return []
+        # check angles and switches first
+        for track_turn in ["right", "center", "left"]:
+            next_tile_id = self.extrapolate_tile_position_with_id(last_tile_id, current_tile_id, turn=track_turn)
+            if next_tile_id in self.dict_with_tiles[current_tile_id].list_with_tracks:
+                # run the recursion
+                path = self.find_route(target_tile_id, current_tile_id, next_tile_id, countdown-1)
+                if path: return [current_tile_id] + path
+        return []
