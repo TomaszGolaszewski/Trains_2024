@@ -232,8 +232,11 @@ class Map:
         coord_world_3 = move_point(coord_world_2, 2 * self.inner_tile_radius, angle + delta_angle)
         return self.get_tile_by_coord_id(self.world2id(coord_world_3))
     
-    def find_route(self, target_tile_id: int, last_tile_id: int, current_tile_id: int, countdown: int) -> list[int]:
-        """"""
+    def find_route(self, target_tile_id: int, last_tile_id: int, current_tile_id: int, \
+                        search_history: list[tuple[int, str]] = [], countdown: int = 100) -> list[int]:
+        """Recursive function that searches for a train route. 
+        The search is interrupted if the function finds a target, or is called too many times, 
+        or detects that the train is running in a loop."""
         # check if current tile is the target
         if current_tile_id == target_tile_id: return [current_tile_id]
         # check if the recursion is not too deep
@@ -242,7 +245,10 @@ class Map:
         for track_turn in ["right", "center", "left"]:
             next_tile_id = self.extrapolate_tile_position_with_id(last_tile_id, current_tile_id, turn=track_turn)
             if next_tile_id in self.dict_with_tiles[current_tile_id].list_with_tracks:
+                # check if the train is running in loop
+                if track_turn != "center" and (current_tile_id, track_turn) in search_history: return []
                 # run the recursion
-                path = self.find_route(target_tile_id, current_tile_id, next_tile_id, countdown-1)
+                path = self.find_route(target_tile_id, current_tile_id, next_tile_id, \
+                                        search_history + [(current_tile_id, track_turn)], countdown-1)
                 if path: return [current_tile_id] + path
         return []

@@ -1,3 +1,8 @@
+v0.1.5 - 17.07.2024
+------
+* Fixes in pathfinding algorithm.
+* Added mechanism for adding and removing targets.
+
 v0.1.4 - 10.07.2024
 ------
 * Added pathfinding algorithm for trains.

@@ -153,10 +153,10 @@ class GameScene(SceneBase):
         # self.current_frame = 0
 
         # create mode buttons
-        mode_list = ["none", "terrain", "tracks", "trains"]
+        mode_list = ["none", "terrain", "tracks", "trains", "targets"]
         self.list_with_mode_buttons = []
         for i, mode in enumerate(mode_list):
-            self.list_with_mode_buttons.append(AdvancedButton((WIN_WIDTH - 600 + 170*i, 40), "["+mode.capitalize()+"]", 30, color=GRAY, option=mode, width=150))
+            self.list_with_mode_buttons.append(AdvancedButton((WIN_WIDTH - 770 + 170*i, 40), "["+mode.capitalize()+"]", 30, color=GRAY, option=mode, width=150))
         # set first map as active as default
         self.list_with_mode_buttons[0].active = True
         self.current_mode = mode_list[0]
@@ -199,7 +199,13 @@ class GameScene(SceneBase):
         Receive all the events that happened since the last frame.
         Handle all received events.
         """
+
+        # calculate values ​​for mouse and tile position
         mouse_pos = pygame.mouse.get_pos()
+        coord_world = screen2world(mouse_pos, self.offset_horizontal, self.offset_vertical, self.scale)
+        coord_id = self.map.world2id(coord_world)
+        current_tile_id = self.map.get_tile_by_coord_id(coord_id)
+
         for event in events:
 
             # mouse button down
@@ -220,15 +226,25 @@ class GameScene(SceneBase):
                         for terrain_button in self.list_with_terrain_buttons:
                             if terrain_button.check_pressing(mouse_pos):
                                 self.current_terrain = terrain_button.option
-
+                    # add targets
+                    if self.current_mode == "targets" and not button_was_pressed:
+                        for train_id in self.dict_with_trains:
+                            self.dict_with_trains[train_id].movement_target.append(current_tile_id)
+                    
                     if not button_was_pressed:
                         self.left_mouse_button_down = True
                         self.right_mouse_button_down = False
 
                 # 3 - right click
                 if event.button == 3:
-                    self.right_mouse_button_down = True
-                    self.left_mouse_button_down = False
+                    # remove targets
+                    if self.current_mode == "targets":
+                        for train_id in self.dict_with_trains:
+                            if current_tile_id in self.dict_with_trains[train_id].movement_target:
+                                self.dict_with_trains[train_id].movement_target.remove(current_tile_id)
+                    else:
+                        self.right_mouse_button_down = True
+                        self.left_mouse_button_down = False
 
             # mouse button up
             if event.type == pygame.MOUSEBUTTONUP:
@@ -307,9 +323,7 @@ class GameScene(SceneBase):
 
 
     # handle the remaining logic related to mouse operation
-        coord_world = screen2world(mouse_pos, self.offset_horizontal, self.offset_vertical, self.scale)
-        coord_id = self.map.world2id(coord_world)
-        current_tile_id = self.map.get_tile_by_coord_id(coord_id)
+        
         # adding entities
         if self.left_mouse_button_down and (not current_tile_id or self.last_used_tile != current_tile_id):
             # add new tile

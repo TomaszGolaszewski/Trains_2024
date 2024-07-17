@@ -60,7 +60,9 @@ class Train:
 
         # find path
         if len(self.movement_target):
-            self.movement_path = map.find_route(self.movement_target[0], self.last_tile_id, self.tile_id, 100)
+            self.movement_path = map.find_route(self.movement_target[0], self.last_tile_id, self.tile_id)
+        else:
+            self.movement_path = []
 
         # check current movement path
         if len(self.movement_path):
