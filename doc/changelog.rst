@@ -1,3 +1,8 @@
+v0.1.7 - 18.07.2024
+------
+* New speed adjustment mechanism.
+* Added collision detection.
+
 v0.1.6 - 17.07.2024
 ------
 * Added mechanism for adding and removing trains.

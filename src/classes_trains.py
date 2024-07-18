@@ -7,7 +7,6 @@ from global_variables import *
 from functions_math import *
 
 class Train:
-    # def __init__(self, id, coord_world, tile_id, angle, color=RED):
     def __init__(self, map, id: int, tile_id: int, last_tile_id: int):
         """Initialization of the train."""
 
@@ -20,16 +19,17 @@ class Train:
         self.angle = angle_to_target(last_tile_coord_world, self.coord_world)
 
         # movement parameters
-        self.state = "no_path"
+        self.state = "stop" # "no_path"
+        self.v_max = 3
+        self.v_target = 0
         self.v_current = 0
-        self.v_max = 1
-        self.acceleration = 0.1
+        self.acceleration = 0.02
         self.turn_speed = 0.01
         self.movement_target = [] # main target of the unit movement
         self.movement_path = [] # path to the closest target
 
         # labels
-        list_with_colors = [BLUE, YELLOW, RED, GREEN, HOTPINK]
+        list_with_colors = [BLUE, YELLOW, ORANGE, GREEN, HOTPINK]
         self.color = list_with_colors[random.randint(0, len(list_with_colors) - 1)]
         self.font_obj = pygame.font.SysFont("arial", 20)
         self.button_array_origin = (5, 30)
@@ -41,11 +41,12 @@ class Train:
         """Draw the train on the screen."""
         coord_screen = world2screen(self.coord_world, offset_x, offset_y, scale) 
         # draw train as symbol
-        pygame.draw.circle(win, self.color, coord_screen, 30*scale)
+        pygame.draw.circle(win, self.color, coord_screen, 40*scale)
         pygame.draw.line(win, BLACK, coord_screen, move_point(coord_screen, 30*scale, self.angle), int(8*scale))
         # draw label
-        text_obj = self.font_obj.render(f"{self.movement_path} {self.movement_target} {self.state}", True, self.color, BLACK) # {self.v_current:.2f} 
-        win.blit(text_obj, (coord_screen[0] + 15, coord_screen[1] + 10))
+        if scale >= 0.25:
+            text_obj = self.font_obj.render(f"{self.state} {self.v_current:.2f} > {self.v_target} ", True, self.color, BLACK) # {self.movement_path} {self.movement_target} 
+            win.blit(text_obj, (coord_screen[0] + 15, coord_screen[1] + 10))
         # draw tracks on path
         for tile_id in self.movement_path:
             pygame.draw.circle(win, self.color, world2screen(map.dict_with_tiles[tile_id].coord_world, offset_x, offset_y, scale) , 10*scale)
@@ -75,7 +76,7 @@ class Train:
             return True
         return False
 
-    def run(self, map):
+    def run(self, map, dict_with_trains):
         """Life-cycle of the train."""
 
         # check position
@@ -84,6 +85,9 @@ class Train:
         if current_tile_id and current_tile_id != self.tile_id:
             self.last_tile_id = self.tile_id
             self.tile_id = current_tile_id
+
+        # check collisions
+        self.check_collisions(dict_with_trains)
 
         # check current movement target
         if len(self.movement_target):
@@ -101,28 +105,56 @@ class Train:
             if map.dict_with_tiles[self.movement_path[0]].coord_id == coord_id:
                 self.movement_path.pop(0) # remove the achieved tile
 
+        # set parameters related to train movement
+        self.set_velocity()
+        self.set_turn_velocity()
+        self.accelerate()
+        self.set_state()
+
         # move the train
-        if len(self.movement_path):
-            self.accelerate()
+        if len(self.movement_path):  
             self.angle = self.get_new_angle(map.dict_with_tiles[self.movement_path[0]].coord_world)
-        else: # if this was the last segment
-            self.decelerate()
         self.coord_world = move_point(self.coord_world, self.v_current, self.angle)
+
+    def check_collisions(self, dict_with_trains):
+        """Check collisions with other trains."""
+        for train_id in dict_with_trains:
+            if train_id != self.id and dict_with_trains[train_id].tile_id == self.tile_id:
+                self.state = "broken"
+                self.v_target = 0
+                self.v_current = 0
+                self.movement_path = []
+                self.movement_target = []
+                self.color = RED
+
+    def set_velocity(self):
+        """Set target velocity based on distance to target."""
+        dist = len(self.movement_path)
+        if not dist: self.v_target = 0
+        elif dist < self.v_max: self.v_target = dist
+        else: self.v_target = self.v_max
+
+    def set_turn_velocity(self):
+        """Set turn velocity based on current linear speed."""
+        self.turn_speed = self.v_current / 80
+
+    def set_state(self):
+        """Set train status."""
+        if self.state != "broken":
+            if self.state == "stop" and self.v_current != 0: self.state = "move"
+            elif self.state == "move" and self.v_target == 0 and self.v_current == 0: self.state = "stop"
 
     def accelerate(self):
         """Accelerate the train - calculate the current speed."""
-        self.state = "move"  
-        self.v_current += self.acceleration
-        if self.v_current > self.v_max: self.v_current = self.v_max
+        if self.state != "broken":
+            if self.v_target > self.v_current:
+                self.v_current += self.acceleration
+                if self.v_target < self.v_current: self.v_current = self.v_target
+            if self.v_target < self.v_current:
+                self.v_current -= self.acceleration
+                if self.v_target > self.v_current: self.v_current = self.v_target
 
-    def decelerate(self):
-        """Decelerate the vehicle - calculate the current speed.""" 
-        self.v_current -= self.acceleration
-        if self.v_current < 0: 
-            self.v_current = 0
-            self.state = "stop"
-
-    def get_new_angle(self, coord_target):
+    def get_new_angle(self, coord_target: tuple[float, float]) -> float:
         """Return new angle closer to the movement target."""
         target_angle = angle_to_target(self.coord_world, coord_target)
         return turn_to_target_angle(self.angle, target_angle, self.turn_speed)

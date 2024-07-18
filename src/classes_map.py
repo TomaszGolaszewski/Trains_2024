@@ -8,7 +8,7 @@ from global_variables import *
 from functions_math import *
 
 class Tile:
-    def __init__(self, id, coord_id, coord_world, list_with_tracks=[], type="grass"):
+    def __init__(self, id, coord_id, coord_world, list_with_tracks=None, type="grass"):
         """Initialization of the tile."""
         self.id = id
         self.coord_id = coord_id
@@ -16,19 +16,21 @@ class Tile:
         self.tile_type = type
         self.set_type(type)
 
-        self.list_with_tracks = list_with_tracks
+        if list_with_tracks is None: self.list_with_tracks = []
+        else: self.list_with_tracks = list_with_tracks
 
         # labels
         self.font_obj = pygame.font.SysFont("arial", 20)
 
-    def draw(self, win, offset_x: int, offset_y: int, scale):
+    def draw(self, win, offset_x: int, offset_y: int, scale: float):
         """Draw the Tile on the screen."""
         coord_screen = world2screen(self.coord_world, offset_x, offset_y, scale) 
         # draw background
         pygame.draw.circle(win, self.color, coord_screen, 50*scale)
         # draw label
-        text_obj = self.font_obj.render(f"{self.id}", True, self.color, BLACK) # {self.coord_id} {self.list_with_tracks}
-        win.blit(text_obj, coord_screen)
+        if scale >= 0.5:
+            text_obj = self.font_obj.render(f"{self.id}", True, self.color, BLACK) # {self.coord_id} {self.list_with_tracks}
+            win.blit(text_obj, coord_screen)
 
     def set_type(self, type, depth=0):
         """Set color of the tile depending on the type of terrain."""
@@ -81,8 +83,6 @@ class Map:
             11: Tile(11, (0, 4), self.id2world((0, 4)), [10,12]),
             12: Tile(12, (0, 5), self.id2world((0, 5)), [11]),
 
-            13: Tile(13, (4, 3), self.id2world((4, 3))),
-
             14: Tile(14, (-1, 0), self.id2world((-1, 0)), [], "water"),
             15: Tile(15, (-2, 0), self.id2world((-2, 0)), [], "water"),
 
@@ -95,6 +95,11 @@ class Map:
         }
         self.lowest_free_id = 21
 
+        for x in range(1,30):
+            for y in range(2,20):
+                self.dict_with_tiles[self.lowest_free_id] = Tile(self.lowest_free_id, (x, y), self.id2world((x, y)))
+                self.lowest_free_id += 1
+
     def draw(self, win, offset_x: int, offset_y: int, scale):
         """Draw the Map on the screen."""
         for tile_id in self.dict_with_tiles:
@@ -104,7 +109,7 @@ class Map:
             coord_screen = world2screen(tile.coord_world, offset_x, offset_y, scale)
             for neighbor_tile_id in tile.list_with_tracks:
                 neighbor_coord_screen = world2screen(self.dict_with_tiles[neighbor_tile_id].coord_world, offset_x, offset_y, scale)
-                pygame.draw.line(win, RED, coord_screen, neighbor_coord_screen, int(8*scale))
+                pygame.draw.line(win, RED, coord_screen, neighbor_coord_screen, int(12*scale))
 
     def add_tile(self, coord_id: tuple[int, int], terrain: str) -> int:
         """Add new tile. If the tile exists, change its type.

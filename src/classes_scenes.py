@@ -384,7 +384,7 @@ class GameScene(SceneBase):
         # run the simulation
         # run trains
         for train_id in self.dict_with_trains:
-            self.dict_with_trains[train_id].run(self.map)
+            self.dict_with_trains[train_id].run(self.map, self.dict_with_trains)
 
     #     self.current_frame += 1
     #     if self.current_frame == FRAMERATE:
