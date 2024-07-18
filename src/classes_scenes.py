@@ -177,18 +177,11 @@ class GameScene(SceneBase):
 
         # initialize the map
         self.map = Map()
+        self.current_selected_train_id = 0
+        self.lowest_free_train_id = 1
 
         # create initial test trains
-        self.dict_with_trains = {
-            # 1: Train(1, self.map.dict_with_tiles[1].coord_world, math.radians(90), RED),
-            # 2: Train(2, self.map.dict_with_tiles[2].coord_world, math.radians(0), ORANGE),
-            3: Train(3, self.map.dict_with_tiles[11].coord_world, 11, math.radians(270), BLUE),
-        }
-        # self.dict_with_trains[1].movement_path = [8,9,10,11,12]
-        # self.dict_with_trains[2].movement_path = [3,4,5,16,17,18]
-        # self.dict_with_trains[3].movement_path = [12,11,10,9,8,2,3,4,5,6,7]
-        self.dict_with_trains[3].last_tile_id = 12
-        self.dict_with_trains[3].movement_target = [18]
+        self.dict_with_trains = {}
 
         # TODO: check and remove
         self.list_with_windows = []
@@ -226,10 +219,21 @@ class GameScene(SceneBase):
                         for terrain_button in self.list_with_terrain_buttons:
                             if terrain_button.check_pressing(mouse_pos):
                                 self.current_terrain = terrain_button.option
+                    # choose train
+                    for i, train_id in enumerate(self.dict_with_trains):
+                        if self.dict_with_trains[train_id].is_button_pressed(mouse_pos, i):
+                            button_was_pressed += True
+                            self.current_selected_train_id = train_id
+                    # add trains
+                    if self.current_mode == "trains" and not button_was_pressed:
+                        tile_1, tile_2 = self.map.get_track_by_coord_world(coord_world)
+                        if tile_1 and tile_2:
+                            self.dict_with_trains[self.lowest_free_train_id] = Train(self.map, self.lowest_free_train_id, tile_1, tile_2)
+                            self.lowest_free_train_id += 1
                     # add targets
-                    if self.current_mode == "targets" and not button_was_pressed:
-                        for train_id in self.dict_with_trains:
-                            self.dict_with_trains[train_id].movement_target.append(current_tile_id)
+                    if self.current_mode == "targets" and not button_was_pressed and \
+                                self.current_selected_train_id in self.dict_with_trains:
+                        self.dict_with_trains[self.current_selected_train_id].movement_target.append(current_tile_id)
                     
                     if not button_was_pressed:
                         self.left_mouse_button_down = True
@@ -239,9 +243,19 @@ class GameScene(SceneBase):
                 if event.button == 3:
                     # remove targets
                     if self.current_mode == "targets":
+                        if self.current_selected_train_id in self.dict_with_trains and \
+                                current_tile_id in self.dict_with_trains[self.current_selected_train_id].movement_target:
+                            self.dict_with_trains[self.current_selected_train_id].movement_target.remove(current_tile_id)
+                    # remove trains
+                    if self.current_mode == "trains":
+                        trains_to_del = []
                         for train_id in self.dict_with_trains:
-                            if current_tile_id in self.dict_with_trains[train_id].movement_target:
-                                self.dict_with_trains[train_id].movement_target.remove(current_tile_id)
+                            if self.dict_with_trains[train_id].last_tile_id == current_tile_id \
+                                             or self.dict_with_trains[train_id].tile_id == current_tile_id:
+                                trains_to_del.append(train_id)
+                        for remove_train_id in trains_to_del:
+                            del self.dict_with_trains[remove_train_id]
+
                     else:
                         self.right_mouse_button_down = True
                         self.left_mouse_button_down = False
@@ -333,15 +347,6 @@ class GameScene(SceneBase):
             if self.current_mode == "tracks" and self.last_used_tile and current_tile_id:
                 self.map.add_track(self.last_used_tile, current_tile_id)
 
-            # if self.current_mode == "trains" and self.last_used_tile and current_tile_id:
-            #     print("BBBBBBBBBBBBBBBBBBBB")
-            #     c1 = self.map.dict_with_tiles[self.last_used_tile].coord_id
-            #     c2 = coord_id
-            #     c3 = self.map.extrapolate_tile_position(c1,c2,"left")
-            #     self.map.add_tile(c1, "mars")
-            #     self.map.add_tile(c2, "mars")
-            #     self.map.add_tile(c3, "water")
-
             self.last_used_tile = current_tile_id
         # removing entities
         if self.right_mouse_button_down:
@@ -351,6 +356,7 @@ class GameScene(SceneBase):
                 for train_id in self.dict_with_trains:
                     if current_tile_id in self.dict_with_trains[train_id].movement_path:
                         self.dict_with_trains[train_id].movement_path = []
+                        # TODO: remove from movement_target and tile_id and last_tile_id
                 self.map.remove_tile(current_tile_id)
             # remove tracks
             if self.current_mode == "tracks" and current_tile_id:
@@ -361,6 +367,7 @@ class GameScene(SceneBase):
                         if tile_1 in self.dict_with_trains[train_id].movement_path or\
                                     tile_2 in self.dict_with_trains[train_id].movement_path:
                             self.dict_with_trains[train_id].movement_path = []
+                            # TODO: remove from movement_target and tile_id and last_tile_id
                     self.map.remove_track(tile_1, tile_2)
         
     def update(self):
@@ -385,15 +392,9 @@ class GameScene(SceneBase):
 
     #         # print debug infos
     #         print_infos_about_view_position(self.offset_horizontal, self.offset_vertical, self.scale)
-    #         print_infos_about_amount_of_objects(self.dict_with_game_state, self.dict_with_units, self.list_with_bullets, self.list_with_windows)
-    #         print_infos_about_players(self.dict_with_game_state)
 
     # # run the simulation
     #     if not self.pause:
-    #         # life-cycles of units AI
-    #         for unit_id in self.dict_with_units:
-    #             self.dict_with_units[unit_id].AI_run(self.map, self.dict_with_game_state, self.dict_with_units)
-
     #         # life-cycles of units
     #         for unit_id in self.dict_with_units:
     #             self.dict_with_units[unit_id].run(self.map, self.dict_with_game_state, self.dict_with_units, self.list_with_bullets)
@@ -423,6 +424,10 @@ class GameScene(SceneBase):
         # draw trains
         for train_id in self.dict_with_trains:
             self.dict_with_trains[train_id].draw(win, self.map, self.offset_horizontal, self.offset_vertical, self.scale)
+        for i, train_id in enumerate(self.dict_with_trains):
+            self.dict_with_trains[train_id].draw_button(win, i)
+            if train_id == self.current_selected_train_id:
+                self.dict_with_trains[train_id].draw_button_selection(win, i)
 
         # draw buttons
         for mode_button in self.list_with_mode_buttons:
@@ -431,25 +436,7 @@ class GameScene(SceneBase):
             for terrain_button in self.list_with_terrain_buttons:
                 terrain_button.draw(win)
 
-    #     # show extra data
-    #     if self.show_extra_data:
-    #         for unit_id in self.dict_with_units:
-    #             self.dict_with_units[unit_id].draw_extra_data(win, self.offset_horizontal, self.offset_vertical, self.scale)
-
-    #     # show movement target
-    #     if self.show_movement_target:
-    #         for unit_id in self.dict_with_units:
-    #             if self.dict_with_units[unit_id].player_id == self.player_id:
-    #                 self.dict_with_units[unit_id].draw_movement_target(win, self.offset_horizontal, self.offset_vertical, self.scale)
-
     # # draw UI
-    #     # draw selection
-    #     if self.left_mouse_button_down:
-    #         unit_selection(win, self.dict_with_units, self.left_mouse_button_coord, 
-    #                        pygame.mouse.get_pos(), self.offset_horizontal, self.offset_vertical, self.scale, -1)
-    #     else:
-    #         make_windows_from_dict_with_units(self.dict_with_units, self.list_with_windows)
-
     #     # draw UI windows
     #     for ui_win in self.list_with_windows:
     #         ui_win.draw(win, self.dict_with_game_state, self.dict_with_units)
