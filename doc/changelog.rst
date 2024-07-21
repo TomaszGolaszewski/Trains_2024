@@ -1,3 +1,8 @@
+v0.1.9 - 21.07.2024
+------
+* Fixes in track reservation mechanism.
+* Added possibility to loop trains targets.
+
 v0.1.8 - 21.07.2024
 ------
 * Added mechanism for track reservation.

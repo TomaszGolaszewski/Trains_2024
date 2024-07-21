@@ -29,6 +29,8 @@ class Train:
         self.movement_whole_path = [] # whole path to the closest target
         self.movement_free_path = [] # free path to the closest target
 
+        self.run_in_loop = False
+
         # labels
         list_with_colors = [BLUE, YELLOW, ORANGE, GREEN, HOTPINK]
         self.color = list_with_colors[random.randint(0, len(list_with_colors) - 1)]
@@ -46,7 +48,7 @@ class Train:
         pygame.draw.line(win, BLACK, coord_screen, move_point(coord_screen, 30*scale, self.angle), int(8*scale))
         # draw label
         if scale >= 0.25:
-            text_obj = self.font_obj.render(f"{self.state} {self.v_current:.2f} > {self.v_target} ", True, self.color, BLACK) # {self.movement_free_path} {self.movement_target} 
+            text_obj = self.font_obj.render(f"{self.movement_free_path} {self.state} {self.v_current:.2f} > {self.v_target} ", True, self.color, BLACK) #  {self.movement_target} 
             win.blit(text_obj, (coord_screen[0] + 15, coord_screen[1] + 10))
         # draw tracks on path
         for tile_id in self.movement_free_path:
@@ -62,6 +64,11 @@ class Train:
         pygame.draw.circle(win, self.color, center, self.button_icon_radius)
         pygame.draw.line(win, BLACK, center, move_point(center, self.button_icon_radius, self.angle), 4)
 
+        # loop button
+        if self.run_in_loop: border = 0
+        else: border = 2
+        pygame.draw.circle(win, WHITE, (center[0] + self.button_width, center[1]), self.button_icon_radius, border)
+
     def draw_button_selection(self, win, number_on_screen: int):
         """Draw train button selection."""
         center = (self.button_array_origin[0] + self.button_width // 2, \
@@ -74,6 +81,14 @@ class Train:
         if self.button_array_origin[0] < x and x < self.button_array_origin[0] + self.button_width and \
                 self.button_array_origin[1] + self.button_height * number_on_screen < y and \
                 y < self.button_array_origin[1] + self.button_height * (number_on_screen + 1):
+            return True
+        
+        # loop button
+        if self.button_array_origin[0] + self.button_width < x and x < self.button_array_origin[0] + 2 * self.button_width and \
+                self.button_array_origin[1] + self.button_height * number_on_screen < y and \
+                y < self.button_array_origin[1] + self.button_height * (number_on_screen + 1):
+            if self.run_in_loop: self.run_in_loop = False
+            else: self.run_in_loop = True
             return True
         return False
 
@@ -92,14 +107,20 @@ class Train:
 
         # check current movement target
         if len(self.movement_target):
-            if map.dict_with_tiles[self.movement_target[0]].coord_id == coord_id:
-                self.movement_target.pop(0) # remove the achieved target
+            if self.movement_target[0] == current_tile_id:
+                last_target = self.movement_target.pop(0) # remove the achieved target
+                if self.run_in_loop:
+                    self.movement_target.append(last_target)
+                self.find_movement_whole_path(map) # calculate trains paths
 
-        # find path
+        # check current movement whole path
+        if len(self.movement_whole_path):
+            if self.movement_whole_path[0] == current_tile_id:
+                self.movement_whole_path.pop(0) # remove the achieved tile
 
-        # check current movement path
+        # check current movement free path
         if len(self.movement_free_path):
-            if map.dict_with_tiles[self.movement_free_path[0]].coord_id == coord_id:
+            if self.movement_free_path[0] == current_tile_id:
                 self.movement_free_path.pop(0) # remove the achieved tile
 
         # set parameters related to train movement
