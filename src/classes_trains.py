@@ -26,7 +26,8 @@ class Train:
         self.acceleration = 0.02
         self.turn_speed = 0.01
         self.movement_target = [] # main target of the unit movement
-        self.movement_path = [] # path to the closest target
+        self.movement_whole_path = [] # whole path to the closest target
+        self.movement_free_path = [] # free path to the closest target
 
         # labels
         list_with_colors = [BLUE, YELLOW, ORANGE, GREEN, HOTPINK]
@@ -45,10 +46,10 @@ class Train:
         pygame.draw.line(win, BLACK, coord_screen, move_point(coord_screen, 30*scale, self.angle), int(8*scale))
         # draw label
         if scale >= 0.25:
-            text_obj = self.font_obj.render(f"{self.state} {self.v_current:.2f} > {self.v_target} ", True, self.color, BLACK) # {self.movement_path} {self.movement_target} 
+            text_obj = self.font_obj.render(f"{self.state} {self.v_current:.2f} > {self.v_target} ", True, self.color, BLACK) # {self.movement_free_path} {self.movement_target} 
             win.blit(text_obj, (coord_screen[0] + 15, coord_screen[1] + 10))
         # draw tracks on path
-        for tile_id in self.movement_path:
+        for tile_id in self.movement_free_path:
             pygame.draw.circle(win, self.color, world2screen(map.dict_with_tiles[tile_id].coord_world, offset_x, offset_y, scale) , 10*scale)
         # draw targets
         for tile_id in self.movement_target:
@@ -95,15 +96,11 @@ class Train:
                 self.movement_target.pop(0) # remove the achieved target
 
         # find path
-        if len(self.movement_target):
-            self.movement_path = map.find_route(self.movement_target[0], self.last_tile_id, self.tile_id)
-        else:
-            self.movement_path = []
 
         # check current movement path
-        if len(self.movement_path):
-            if map.dict_with_tiles[self.movement_path[0]].coord_id == coord_id:
-                self.movement_path.pop(0) # remove the achieved tile
+        if len(self.movement_free_path):
+            if map.dict_with_tiles[self.movement_free_path[0]].coord_id == coord_id:
+                self.movement_free_path.pop(0) # remove the achieved tile
 
         # set parameters related to train movement
         self.set_velocity()
@@ -112,9 +109,44 @@ class Train:
         self.set_state()
 
         # move the train
-        if len(self.movement_path):  
-            self.angle = self.get_new_angle(map.dict_with_tiles[self.movement_path[0]].coord_world)
+        if len(self.movement_free_path):  
+            self.angle = self.get_new_angle(map.dict_with_tiles[self.movement_free_path[0]].coord_world)
         self.coord_world = move_point(self.coord_world, self.v_current, self.angle)
+
+    def find_movement_whole_path(self, map):
+        """Find the entire route to the current target."""
+        if len(self.movement_target):
+            self.movement_whole_path = map.find_route(self.movement_target[0], self.last_tile_id, self.tile_id)
+        else:
+            self.movement_whole_path = []
+
+    def find_movement_free_path(self, map, dict_with_trains, dict_with_reservations):
+        """Select a collision-free start from the found route."""
+
+        self.movement_free_path = []
+        considered_segment = []
+
+        # check path
+        for tile_id in self.movement_whole_path:
+            # check end of segment
+            if len(map.dict_with_tiles[tile_id].list_with_tracks) != 2:
+                self.movement_free_path += considered_segment
+                considered_segment = []
+            # check collisions
+            if any((self.id != t_id and dict_with_trains[t_id].tile_id == tile_id) for t_id in dict_with_trains):
+                break
+            # check if the path is not reserved
+            if tile_id not in dict_with_reservations: # path is still free
+                considered_segment.append(tile_id)
+            else:
+                break
+            # add last segment
+            if len(self.movement_target) and tile_id == self.movement_target[0]:
+                self.movement_free_path += considered_segment
+
+        # reserve path
+        for tile_id in self.movement_free_path:    
+            dict_with_reservations[tile_id] = self.id
 
     def check_collisions(self, dict_with_trains):
         """Check collisions with other trains."""
@@ -123,13 +155,13 @@ class Train:
                 self.state = "broken"
                 self.v_target = 0
                 self.v_current = 0
-                self.movement_path = []
+                self.movement_free_path = []
                 self.movement_target = []
                 self.color = RED
 
     def set_velocity(self):
         """Set target velocity based on distance to target."""
-        dist = len(self.movement_path)
+        dist = len(self.movement_free_path)
         if not dist: self.v_target = 0
         elif dist < self.v_max: self.v_target = dist
         else: self.v_target = self.v_max

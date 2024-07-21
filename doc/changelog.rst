@@ -1,3 +1,7 @@
+v0.1.8 - 21.07.2024
+------
+* Added mechanism for track reservation.
+
 v0.1.7 - 18.07.2024
 ------
 * New speed adjustment mechanism.

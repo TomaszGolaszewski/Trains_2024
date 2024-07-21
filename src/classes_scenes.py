@@ -150,7 +150,7 @@ class GameScene(SceneBase):
         # self.show_extra_data = False
         # self.show_movement_target = False
         # self.pause = False
-        # self.current_frame = 0
+        self.current_frame = 0
 
         # create mode buttons
         mode_list = ["none", "terrain", "tracks", "trains", "targets"]
@@ -354,8 +354,8 @@ class GameScene(SceneBase):
             if self.current_mode == "terrain" and current_tile_id:
                 # remove tile from train variables
                 for train_id in self.dict_with_trains:
-                    if current_tile_id in self.dict_with_trains[train_id].movement_path:
-                        self.dict_with_trains[train_id].movement_path = []
+                    if current_tile_id in self.dict_with_trains[train_id].movement_free_path:
+                        self.dict_with_trains[train_id].movement_free_path = []
                         # TODO: remove from movement_target and tile_id and last_tile_id
                 self.map.remove_tile(current_tile_id)
             # remove tracks
@@ -364,14 +364,19 @@ class GameScene(SceneBase):
                 if tile_1 and tile_2:
                     # remove tile from train variables
                     for train_id in self.dict_with_trains:
-                        if tile_1 in self.dict_with_trains[train_id].movement_path or\
-                                    tile_2 in self.dict_with_trains[train_id].movement_path:
-                            self.dict_with_trains[train_id].movement_path = []
+                        if tile_1 in self.dict_with_trains[train_id].movement_free_path or\
+                                    tile_2 in self.dict_with_trains[train_id].movement_free_path:
+                            self.dict_with_trains[train_id].movement_free_path = []
                             # TODO: remove from movement_target and tile_id and last_tile_id
                     self.map.remove_track(tile_1, tile_2)
         
     def update(self):
         """Game logic for the scene."""
+
+        # count tics
+        self.current_frame += 1
+        if self.current_frame == FRAMERATE:
+            self.current_frame = 0
 
         # check hovering of the mouse
         mouse_coord = pygame.mouse.get_pos()
@@ -382,16 +387,21 @@ class GameScene(SceneBase):
                 terrain_button.check_hovering(mouse_coord)
 
         # run the simulation
+
+        if not self.current_frame:
+            
+            # calculate trains paths
+            for train_id in self.dict_with_trains:
+                self.dict_with_trains[train_id].find_movement_whole_path(self.map)
+
+            # calculate trains free paths
+            dict_with_reservations = {}
+            for train_id in self.dict_with_trains:
+                self.dict_with_trains[train_id].find_movement_free_path(self. map, self.dict_with_trains, dict_with_reservations)
+
         # run trains
         for train_id in self.dict_with_trains:
             self.dict_with_trains[train_id].run(self.map, self.dict_with_trains)
-
-    #     self.current_frame += 1
-    #     if self.current_frame == FRAMERATE:
-    #         self.current_frame = 0
-
-    #         # print debug infos
-    #         print_infos_about_view_position(self.offset_horizontal, self.offset_vertical, self.scale)
 
     # # run the simulation
     #     if not self.pause:
