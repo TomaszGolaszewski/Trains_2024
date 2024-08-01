@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Fastapi",
+            "name": "Debug Trains 2024",
             "type": "python",
             "request": "attach",
             "port": 5858,

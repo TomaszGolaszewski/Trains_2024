@@ -1,8 +1,8 @@
 version: '3.11'
 services:
-    core_api:
+    core:
         build: .
-        container_name: "trains_2024_server"
+        container_name: "trains_2024_container"
         ports:
             - "8000:8000"
             - "5858:5858"
