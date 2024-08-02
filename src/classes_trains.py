@@ -39,23 +39,27 @@ class Train:
         self.button_height = 40
         self.button_width = 40
         self.button_icon_radius = 15
+        self.list_with_trace = []
 
     def draw(self, win, map, offset_x: int, offset_y: int, scale):
         """Draw the train on the screen."""
-        coord_screen = world2screen(self.coord_world, offset_x, offset_y, scale) 
+        coord_screen = world2screen(self.coord_world, offset_x, offset_y, scale)
+        # draw tracks on path
+        for tile_id in self.movement_free_path:
+            pygame.draw.circle(win, self.color, world2screen(map.dict_with_tiles[tile_id].coord_world, offset_x, offset_y, scale), 10*scale)
+        # draw targets
+        for tile_id in self.movement_target:
+            pygame.draw.circle(win, self.color, world2screen(map.dict_with_tiles[tile_id].coord_world, offset_x, offset_y, scale), 30*scale)
+        # draw trace list
+        for coord_track in self.list_with_trace:
+            pygame.draw.circle(win, self.color, world2screen(coord_track, offset_x, offset_y, scale), 20*scale)
         # draw train as symbol
         pygame.draw.circle(win, self.color, coord_screen, 40*scale)
         pygame.draw.line(win, BLACK, coord_screen, move_point(coord_screen, 30*scale, self.angle), int(8*scale))
         # draw label
         if scale >= 0.25:
-            text_obj = self.font_obj.render(f"{self.movement_free_path} {self.state} {self.v_current:.2f} > {self.v_target} ", True, self.color, BLACK) #  {self.movement_target} 
+            text_obj = self.font_obj.render(f"{self.id} {self.state} {self.v_current:.2f} > {self.v_target}", True, self.color, BLACK) #  {self.movement_target} {self.movement_free_path} {self.movement_whole_path}
             win.blit(text_obj, (coord_screen[0] + 15, coord_screen[1] + 10))
-        # draw tracks on path
-        for tile_id in self.movement_free_path:
-            pygame.draw.circle(win, self.color, world2screen(map.dict_with_tiles[tile_id].coord_world, offset_x, offset_y, scale) , 10*scale)
-        # draw targets
-        for tile_id in self.movement_target:
-            pygame.draw.circle(win, self.color, world2screen(map.dict_with_tiles[tile_id].coord_world, offset_x, offset_y, scale) , 30*scale)
 
     def draw_button(self, win, number_on_screen: int):
         """Draw train button."""
@@ -111,7 +115,7 @@ class Train:
                 last_target = self.movement_target.pop(0) # remove the achieved target
                 if self.run_in_loop:
                     self.movement_target.append(last_target)
-                self.find_movement_whole_path(map) # calculate trains paths
+                map.calculate_trains_path(dict_with_trains)
 
         # check current movement whole path
         if len(self.movement_whole_path):
@@ -132,7 +136,16 @@ class Train:
         # move the train
         if len(self.movement_free_path):  
             self.angle = self.get_new_angle(map.dict_with_tiles[self.movement_free_path[0]].coord_world)
+        else:
+            emergency_next_track_id = map.find_next_track(self.last_tile_id, self.tile_id)
+            if emergency_next_track_id:
+                self.angle = self.get_new_angle(map.dict_with_tiles[emergency_next_track_id].coord_world)
         self.coord_world = move_point(self.coord_world, self.v_current, self.angle)
+
+        # add coordinates to trace list
+        self.list_with_trace.append(self.coord_world)
+        if len(self.list_with_trace) > 100:
+            self.list_with_trace.pop(0)
 
     def find_movement_whole_path(self, map):
         """Find the entire route to the current target."""

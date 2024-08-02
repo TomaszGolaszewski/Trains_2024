@@ -1,3 +1,10 @@
+v0.1.10 - 02.08.2024
+-------
+* More fixes in pathfinding algorithm.
+* More fixes in track reservation mechanism.
+* Added trace animation.
+* Added base files to debug program with VS Code.
+
 v0.1.9 - 21.07.2024
 ------
 * Fixes in track reservation mechanism.

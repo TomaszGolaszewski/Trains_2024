@@ -4,7 +4,6 @@ import random
 
 from settings import *
 from global_variables import *
-# from classes_hex import *
 from functions_math import *
 
 class Tile:
@@ -242,18 +241,34 @@ class Map:
         """Recursive function that searches for a train route. 
         The search is interrupted if the function finds a target, or is called too many times, 
         or detects that the train is running in a loop."""
-        # check if current tile is the target
-        if current_tile_id == target_tile_id: return [current_tile_id]
         # check if the recursion is not too deep
         if not countdown: return []
         # check angles and switches first
         for track_turn in ["right", "center", "left"]:
             next_tile_id = self.extrapolate_tile_position_with_id(last_tile_id, current_tile_id, turn=track_turn)
             if next_tile_id in self.dict_with_tiles[current_tile_id].list_with_tracks:
+                # check if next tile is the target
+                if next_tile_id == target_tile_id: return [next_tile_id]
                 # check if the train is running in loop
                 if track_turn != "center" and (current_tile_id, track_turn) in search_history: return []
                 # run the recursion
                 path = self.find_route(target_tile_id, current_tile_id, next_tile_id, \
                                         search_history + [(current_tile_id, track_turn)], countdown-1)
-                if path: return [current_tile_id] + path
+                if path: return [next_tile_id] + path
         return []
+
+    def find_next_track(self, last_tile_id: int, current_tile_id: int) -> int:
+        """Find and return the next tile on the route."""
+        for track_turn in ["right", "center", "left"]:
+            next_tile_id = self.extrapolate_tile_position_with_id(last_tile_id, current_tile_id, turn=track_turn)
+            if next_tile_id in self.dict_with_tiles[current_tile_id].list_with_tracks:
+                return next_tile_id
+        return 0
+
+    def calculate_trains_path(self, dict_with_trains: dict):
+        """Calls methods calculating the route for all trains."""
+        dict_with_reservations = {}
+        for train_id in dict_with_trains:
+            dict_with_trains[train_id].find_movement_whole_path(self)
+            dict_with_trains[train_id].find_movement_free_path(self, dict_with_trains, dict_with_reservations)
+            

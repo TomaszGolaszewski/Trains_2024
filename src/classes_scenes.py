@@ -230,12 +230,13 @@ class GameScene(SceneBase):
                         if tile_1 and tile_2:
                             self.dict_with_trains[self.lowest_free_train_id] = Train(self.map, self.lowest_free_train_id, tile_1, tile_2)
                             self.lowest_free_train_id += 1
+                            self.map.calculate_trains_path(self.dict_with_trains)
                     # add targets
                     if self.current_mode == "targets" and not button_was_pressed and \
                                 self.current_selected_train_id in self.dict_with_trains:
                         self.dict_with_trains[self.current_selected_train_id].movement_target.append(current_tile_id)
                         # calculate trains paths
-                        self.dict_with_trains[self.current_selected_train_id].find_movement_whole_path(self.map)
+                        self.map.calculate_trains_path(self.dict_with_trains)
                     
                     if not button_was_pressed:
                         self.left_mouse_button_down = True
@@ -249,7 +250,7 @@ class GameScene(SceneBase):
                                 current_tile_id in self.dict_with_trains[self.current_selected_train_id].movement_target:
                             self.dict_with_trains[self.current_selected_train_id].movement_target.remove(current_tile_id)
                             # calculate trains paths
-                            self.dict_with_trains[self.current_selected_train_id].find_movement_whole_path(self.map)
+                            self.map.calculate_trains_path(self.dict_with_trains)
                     # remove trains
                     if self.current_mode == "trains":
                         trains_to_del = []
@@ -259,6 +260,7 @@ class GameScene(SceneBase):
                                 trains_to_del.append(train_id)
                         for remove_train_id in trains_to_del:
                             del self.dict_with_trains[remove_train_id]
+                        self.map.calculate_trains_path(self.dict_with_trains)
 
                     else:
                         self.right_mouse_button_down = True
@@ -350,6 +352,7 @@ class GameScene(SceneBase):
             # add new track
             if self.current_mode == "tracks" and self.last_used_tile and current_tile_id:
                 self.map.add_track(self.last_used_tile, current_tile_id)
+                self.map.calculate_trains_path(self.dict_with_trains)
 
             self.last_used_tile = current_tile_id
         # removing entities
@@ -357,30 +360,22 @@ class GameScene(SceneBase):
             # remove tile
             if self.current_mode == "terrain" and current_tile_id:
                 # remove tile from train variables
-                for train_id in self.dict_with_trains:
-                    if current_tile_id in self.dict_with_trains[train_id].movement_free_path:
-                        self.dict_with_trains[train_id].movement_free_path = []
-                        # TODO: remove from movement_target and tile_id and last_tile_id
                 self.map.remove_tile(current_tile_id)
+                self.map.calculate_trains_path(self.dict_with_trains)
             # remove tracks
             if self.current_mode == "tracks" and current_tile_id:
                 tile_1, tile_2 = self.map.get_track_by_coord_world(coord_world)
                 if tile_1 and tile_2:
                     # remove tile from train variables
-                    for train_id in self.dict_with_trains:
-                        if tile_1 in self.dict_with_trains[train_id].movement_free_path or\
-                                    tile_2 in self.dict_with_trains[train_id].movement_free_path:
-                            self.dict_with_trains[train_id].movement_free_path = []
-                            self.dict_with_trains[train_id].find_movement_whole_path(self.map)
-                            # TODO: remove from movement_target and tile_id and last_tile_id
                     self.map.remove_track(tile_1, tile_2)
+                    self.map.calculate_trains_path(self.dict_with_trains)
         
     def update(self):
         """Game logic for the scene."""
 
         # count tics
         self.current_frame += 1
-        if self.current_frame == 3 * FRAMERATE:
+        if self.current_frame == FRAMERATE: # // 10:
             self.current_frame = 0
 
         # check hovering of the mouse
@@ -392,13 +387,10 @@ class GameScene(SceneBase):
                 terrain_button.check_hovering(mouse_coord)
 
         # run the simulation
-
         if not self.current_frame:
             
             # calculate trains free paths
-            dict_with_reservations = {}
-            for train_id in self.dict_with_trains:
-                self.dict_with_trains[train_id].find_movement_free_path(self. map, self.dict_with_trains, dict_with_reservations)
+            self.map.calculate_trains_path(self.dict_with_trains)
 
         # run trains
         for train_id in self.dict_with_trains:
