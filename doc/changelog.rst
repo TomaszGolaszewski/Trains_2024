@@ -1,3 +1,9 @@
+S.0.1.2 - 05.08.2024
+-------
+* Added logic for map construction;
+* Added endpoint allowing downloading of the entire game world;
+* Added endpoint allowing downloading of current trains data.
+
 S.0.1.1 - 01.08.2024
 -------
 * Changes regarding requirements file.
